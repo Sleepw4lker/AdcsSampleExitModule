@@ -340,6 +340,3 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
-
-CERTCLILib.dll
-CERTEXITLib.dll
