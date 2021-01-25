@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using CERTEXITLib;
 using CERTCLILib;
+using Microsoft.Win32;
 
 // Kudos to https://nach0focht.wordpress.com/2014/01/05/exit-modules/
 
@@ -23,6 +24,8 @@ namespace MyFirstExitModule
         private static int PROPTYPE_BINARY = 3;
         private static int PROPTYPE_STRING = 4;
         private static int PROPTYPE_ANSI = 5;
+
+        private string OutputDirectory = @"C:";
 
         [DllImport(@"oleaut32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
         static extern Int32 VariantClear(IntPtr pvarg);
@@ -57,13 +60,21 @@ namespace MyFirstExitModule
 
         public int Initialize(string strConfig)
         {
+            RegistryKey configRegistryKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\CertSvc\Configuration\" + strConfig + @"\ExitModules\MyFirstExitModule");
+            if (configRegistryKey != null)
+            {
+                OutputDirectory = (string)configRegistryKey.GetValue("OutputDirectory");
+            }
 
-            return (Int32)(ExitEvents.CertIssued |
-                            ExitEvents.CertPending | ExitEvents.CertDenied
-                            | ExitEvents.CertRevoked |
-                            ExitEvents.CertRetrievePending
-                            | ExitEvents.CRLIssued |
-                        ExitEvents.Shutdown);
+            return (Int32)(
+                ExitEvents.CertIssued |
+                ExitEvents.CertPending |
+                ExitEvents.CertDenied |
+                ExitEvents.CertRevoked |
+                ExitEvents.CertRetrievePending | 
+                ExitEvents.CRLIssued |
+                ExitEvents.Shutdown
+                );
         }
 
         public void Notify(int ExitEvent, int Context)
@@ -83,7 +94,14 @@ namespace MyFirstExitModule
 
                     CCertServerExit CertServer = new CCertServerExit();
 
+                    // CA properties must be queried before the SetContext Method
+
+                    // Must be called before querying Certificate properties
+                    // https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-setcontext
                     CertServer.SetContext(Context);
+
+                    // Retrieving Certificate Properties
+                    // https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-getcertificateproperty
 
                     // Get VARIANT containing certificate bytes
                     CertServer.GetCertificateProperty("RawCertificate", PROPTYPE_BINARY, variantObjectPtr);
@@ -105,6 +123,8 @@ namespace MyFirstExitModule
                     variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
                     int RequestId = (int)variantObject;
                     VariantClear(variantObjectPtr);
+
+                    /*
 
                     // Get VARIANT containing Serial Number
                     CertServer.GetCertificateProperty("SerialNumber", PROPTYPE_STRING, variantObjectPtr);
@@ -130,13 +150,18 @@ namespace MyFirstExitModule
                     DateTime NotAfter = (DateTime)variantObject;
                     VariantClear(variantObjectPtr);
 
+                    */
+
 
                     // Free the memory block allocated to hold VARIANT
                     Marshal.FreeHGlobal(variantObjectPtr);
 
                     // Write the Certificate to File
-                    System.IO.File.WriteAllBytes(@"C:\" + RequestId.ToString() + ".cer", RawCertificate);
-                    System.IO.File.WriteAllText(@"C:\" + RequestId.ToString() + "_base64.cer", Convert.ToBase64String(RawCertificate));
+                    if (OutputDirectory != null)
+                    {
+                        //System.IO.File.WriteAllBytes(@"C:\" + RequestId.ToString() + ".cer", RawCertificate);
+                        System.IO.File.WriteAllText(OutputDirectory + @"\" + RequestId.ToString() + ".cer", Convert.ToBase64String(RawCertificate));
+                    }
 
                     break;
                 case (int)ExitEvents.CertPending:
