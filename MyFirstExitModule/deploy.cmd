@@ -9,4 +9,3 @@ xcopy %DLL% C:\Windows\SysWOW64\.
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\regasm.exe C:\Windows\System32\%DLL%
 net start certsvc
 start certsrv.msc
-pause

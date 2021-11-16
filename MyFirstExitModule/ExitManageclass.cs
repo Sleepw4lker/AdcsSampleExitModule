@@ -46,7 +46,7 @@ namespace MyFirstExitModule
                     break;
 
                 case "Copyright":
-                    strMsg = "Copyright 2021 by Uwe Gradenegger";
+                    strMsg = "Copyright © 2021 Uwe Gradenegger";
                     break;
 
                 case "File Version":
