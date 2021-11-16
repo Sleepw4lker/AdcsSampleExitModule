@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.IO;
+using System.Xml;
+using System.Text;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 using CERTEXITLib;
 using CERTCLILib;
 using Microsoft.Win32;
@@ -12,19 +13,26 @@ using Microsoft.Win32;
 
 namespace MyFirstExitModule
 {
-    [ComVisible(true)]  //expose to COM
+    [ComVisible(true)]  // Expose to COM
     [ClassInterface(ClassInterfaceType.None)]
-    [ProgId("MyFirstExitModule.Exit")] //this is the progId that will be used when registering the dll that you can look up in the registry
-    [Guid("5f036df3-c2c4-42a0-918c-24a376828e57")]  //this is the GUID the dll's will be registered under, it should be unique for each exit module
+    [ProgId("MyFirstExitModule.Exit")] // This is the progId that will be used when registering the dll that you can look up in the registry
+    [Guid("5f036df3-c2c4-42a0-918c-24a376828e57")]  // This is the GUID the dll's will be registered under, it should be unique for each exit module
     public class Exit : CERTEXITLib.ICertExit2, CERTEXITLib.ICertExit
     {
-        //enums needed when calling the GetCertificiateProperty method
+        // Enums needed when calling the GetCertificiateProperty method
         private static int PROPTYPE_LONG = 1;
         private static int PROPTYPE_DATE = 2;
         private static int PROPTYPE_BINARY = 3;
         private static int PROPTYPE_STRING = 4;
         private static int PROPTYPE_ANSI = 5;
 
+        /*
+        private static int CR_IN_PKCS10 = 0x100;
+        private static int CR_IN_KEYGEN = 0x200;
+        private static int CR_IN_PKCS7 = 0x300;
+         * */
+
+        // Build a Logic here
         private string OutputDirectory = @"C:";
 
         [DllImport(@"oleaut32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
@@ -52,7 +60,40 @@ namespace MyFirstExitModule
             Shutdown = 0x40
         }
 
-        //method must return a description string when the server engine requests it
+        public class IssuedCertificate
+        {
+            public UInt32 RequestId { get; set; } = 0;
+            public string RequesterName { get; set; } = null;
+            public int RequestType { get; set; }
+            public string RawRequest { get; set; } = null;
+            public string SerialNumber { get; set; } = null;
+            public DateTime NotBefore { get; set; }
+            public DateTime NotAfter { get; set; }
+            public string DistinguishedName { get; set; } = null;
+            public string RawCertificate { get; set; } = null;
+        }
+
+        // https://stackoverflow.com/questions/1123718/format-xml-string-to-print-friendly-xml-string
+        private static string PrettyXml(string xml)
+        {
+            var stringBuilder = new StringBuilder();
+
+            var element = XElement.Parse(xml);
+
+            var settings = new XmlWriterSettings();
+            settings.OmitXmlDeclaration = true;
+            settings.Indent = true;
+            settings.NewLineOnAttributes = true;
+
+            using (var xmlWriter = XmlWriter.Create(stringBuilder, settings))
+            {
+                element.Save(xmlWriter);
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        // Method must return a description string when the server engine requests it
         public string GetDescription()
         {
             return "My First Exit Module";
@@ -66,6 +107,7 @@ namespace MyFirstExitModule
                 OutputDirectory = (string)configRegistryKey.GetValue("OutputDirectory");
             }
 
+            // Subscribe to the Events we want to process
             return (Int32)(
                 ExitEvents.CertIssued |
                 ExitEvents.CertPending |
@@ -79,7 +121,6 @@ namespace MyFirstExitModule
 
         public void Notify(int ExitEvent, int Context)
         {
-            string strNotify = null;
 
             switch (ExitEvent)
             {
@@ -90,11 +131,13 @@ namespace MyFirstExitModule
                     // https://blogs.msdn.microsoft.com/alejacma/2008/08/04/how-to-modify-an-interop-assembly-to-change-the-return-type-of-a-method-vb-net/
                     Object variantObject;
                     IntPtr variantObjectPtr;
+                    IntPtr bstrPtr;
+                    int bstrLen;
                     variantObjectPtr = Marshal.AllocHGlobal(2048);
 
                     CCertServerExit CertServer = new CCertServerExit();
 
-                    // CA properties must be queried before the SetContext Method
+                    // CA properties must be queried before the SetContext Method, or SetContext must be set back to zero
 
                     // Must be called before querying Certificate properties
                     // https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-setcontext
@@ -104,63 +147,97 @@ namespace MyFirstExitModule
                     // https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-getcertificateproperty
 
                     // Get VARIANT containing certificate bytes
+                    // Read ANSI BSTR information from the VARIANT as we know RawCertificate property is ANSI BSTR.
+                    // Please note that the below code is written based on how the VARIANT structure looks like in C/C++
                     CertServer.GetCertificateProperty("RawCertificate", PROPTYPE_BINARY, variantObjectPtr);
-
-                    // Read ANSI BSTR information from the VARIANT as we know RawCertificate property
-                    // is ANSI BSTR. Please note that the below code is written based on how the
-                    // VARIANT structure looks like in C/C++
-
-                    IntPtr bstrPtr;
-                    bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);
-                    int bstrLen;
+                    bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);                    
                     bstrLen = Marshal.ReadInt32(bstrPtr, -4);
                     byte[] RawCertificate = new byte[bstrLen];
                     Marshal.Copy(bstrPtr, RawCertificate, 0, bstrLen);
                     VariantClear(variantObjectPtr);
 
-                    // Get VARIANT containing RequestId
                     CertServer.GetCertificateProperty("RequestId", PROPTYPE_LONG, variantObjectPtr);
                     variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
-                    int RequestId = (int)variantObject;
+                    UInt32 RequestId = (UInt32)variantObject;
                     VariantClear(variantObjectPtr);
 
-                    /*
-
-                    // Get VARIANT containing Serial Number
                     CertServer.GetCertificateProperty("SerialNumber", PROPTYPE_STRING, variantObjectPtr);
                     variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
                     string SerialNumber = (String)variantObject;
                     VariantClear(variantObjectPtr);
 
-                    // Get VARIANT containing Distinguished Name
                     CertServer.GetCertificateProperty("DistinguishedName", PROPTYPE_STRING, variantObjectPtr);
                     variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
                     string DistinguishedName = (String)variantObject;
                     VariantClear(variantObjectPtr);
 
-                    // Get VARIANT containing Not Before date
                     CertServer.GetCertificateProperty("NotBefore", PROPTYPE_DATE, variantObjectPtr);
                     variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
                     DateTime NotBefore = (DateTime)variantObject;
                     VariantClear(variantObjectPtr);
 
-                    // Get VARIANT containing Not After date
                     CertServer.GetCertificateProperty("NotAfter", PROPTYPE_DATE, variantObjectPtr);
                     variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
                     DateTime NotAfter = (DateTime)variantObject;
                     VariantClear(variantObjectPtr);
 
-                    */
+                    // Retrieving Request Properties
+                    // https://docs.microsoft.com/de-de/windows/win32/api/certif/nf-certif-icertserverexit-getrequestproperty
 
+                    CertServer.GetRequestProperty("RawRequest", PROPTYPE_BINARY, variantObjectPtr);
+                    bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);
+                    bstrLen = Marshal.ReadInt32(bstrPtr, -4);
+                    byte[] RawRequest = new byte[bstrLen];
+                    Marshal.Copy(bstrPtr, RawRequest, 0, bstrLen);
+                    VariantClear(variantObjectPtr);
+                    
+                    CertServer.GetRequestProperty("RequesterName", PROPTYPE_STRING, variantObjectPtr);
+                    variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
+                    String RequesterName = (String)variantObject;
+                    VariantClear(variantObjectPtr);
 
-                    // Free the memory block allocated to hold VARIANT
+                    CertServer.GetRequestProperty("RequestType", PROPTYPE_LONG, variantObjectPtr);
+                    variantObject = Marshal.GetObjectForNativeVariant(variantObjectPtr);
+                    int RequestType = (int)variantObject;
+                    VariantClear(variantObjectPtr);
+
+                    // TODO: Can we access the "Name Properties" here, and should we, in Terms of accessing the CA Database...?
+                    // https://docs.microsoft.com/en-us/windows/win32/seccrypto/name-properties
+
+                    // We're done. Free the memory block allocated to hold VARIANT.
                     Marshal.FreeHGlobal(variantObjectPtr);
 
-                    // Write the Certificate to File
-                    if (OutputDirectory != null)
+                    // Build the Data Structure for export
+                    var CertInfo = new IssuedCertificate
                     {
-                        //System.IO.File.WriteAllBytes(@"C:\" + RequestId.ToString() + ".cer", RawCertificate);
-                        System.IO.File.WriteAllText(OutputDirectory + @"\" + RequestId.ToString() + ".cer", Convert.ToBase64String(RawCertificate));
+                        RequestId = RequestId,
+                        RequesterName = RequesterName,
+                        RequestType = RequestType,
+                        RawRequest = Convert.ToBase64String(RawRequest, Base64FormattingOptions.None),
+                        SerialNumber = SerialNumber,
+                        NotBefore = NotBefore,
+                        NotAfter = NotAfter,
+                        DistinguishedName = DistinguishedName,
+                        RawCertificate = Convert.ToBase64String(RawCertificate, Base64FormattingOptions.None)
+                    };
+
+                    // Serialize to XML
+                    System.Xml.Serialization.XmlSerializer OutputXmlSerializer = new XmlSerializer(typeof(IssuedCertificate));
+
+                    using (var OutputStringWriter = new StringWriter())
+                    {
+                        using (XmlWriter OutputXmlWriter = XmlWriter.Create(OutputStringWriter))
+                        {
+                            OutputXmlSerializer.Serialize(OutputXmlWriter, CertInfo);
+
+                            if (OutputDirectory != null)
+                            {
+                                System.IO.File.WriteAllText(
+                                    OutputDirectory + @"\" + RequestId.ToString() + ".xml",
+                                    PrettyXml(OutputStringWriter.ToString())
+                                    );
+                            }
+                        }
                     }
 
                     break;

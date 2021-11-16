@@ -8,7 +8,7 @@ using CERTEXITLib;
 
 namespace MyFirstExitModule
 {
-    [ComVisible(true)]  //expose to COM
+    [ComVisible(true)]  // Expose to COM
     [ClassInterface(ClassInterfaceType.None)]
     [ProgId("MyFirstExitModule.ExitManage")] //this is the progId that will be used when registering the dll that you can look up in the registry
     [Guid("5f036df3-c2c4-42a0-918c-24a376828e57")]  //this is the GUID the dll's will be registered under, it should be unique for each exit module
@@ -33,23 +33,30 @@ namespace MyFirstExitModule
         {
             string strMsg = null;
 
-            switch (strPropertyName) //each of these is required
+            switch (strPropertyName) // Each of these is required
             {
+                // The name visible when adding the exit module
                 case "Name":
-                    strMsg = "MyFirstExitModule";  //the name visible when adding the exit module
+                    strMsg = "MyFirstExitModule"; 
                     break;
+
+                // Description visible from AD CS exit module tab
                 case "Description":
-                    strMsg = "My first Exit Module"; //description visible from AD CS exit module tab
+                    strMsg = "My first Exit Module";
                     break;
+
                 case "Copyright":
-                    strMsg = "Copyright 2021";
+                    strMsg = "Copyright 2021 by Uwe Gradenegger";
                     break;
+
                 case "File Version":
-                    strMsg = "0.0.1";
+                    strMsg = "0.0.1"; // Insert Values from the AssemblyInfo here
                     break;
+
                 case "Product Version":
-                    strMsg = "0.0.1";
+                    strMsg = "0.0.1"; // Insert Values from the AssemblyInfo here
                     break;
+
                 default:
                     strMsg = "Unknown Property: " + strPropertyName;
                     break;

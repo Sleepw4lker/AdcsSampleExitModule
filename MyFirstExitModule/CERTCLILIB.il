@@ -764,7 +764,8 @@
           instance object 
           marshal( struct) 
           GetRequestProperty([in] string  marshal( bstr) strPropertyName,
-                             [in] int32 PropertyType) runtime managed internalcall
+                             [in] int32 PropertyType,
+                             [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 01 00 02 60 00 00 )                         // .....`..
   } // end of method ICertServerPolicy::GetRequestProperty
@@ -782,7 +783,7 @@
           marshal( struct) 
           GetCertificateProperty([in] string  marshal( bstr) strPropertyName,
                                  [in] int32 PropertyType,
-								 [out] native int pvarPropertyValue) runtime managed internalcall
+								                 [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 03 00 02 60 00 00 )                         // .....`..
   } // end of method ICertServerPolicy::GetCertificateProperty
@@ -898,7 +899,8 @@
           instance object 
           marshal( struct) 
           GetRequestProperty([in] string  marshal( bstr) strPropertyName,
-                             [in] int32 PropertyType) runtime managed internalcall
+                             [in] int32 PropertyType,
+                             [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 01 00 02 60 00 00 )                         // .....`..
     .override CERTCLILib.ICertServerPolicy::GetRequestProperty
@@ -918,7 +920,7 @@
           marshal( struct) 
           GetCertificateProperty([in] string  marshal( bstr) strPropertyName,
                                  [in] int32 PropertyType,
-								 [out] native int pvarPropertyValue) runtime managed internalcall
+								                 [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 03 00 02 60 00 00 )                         // .....`..
     .override CERTCLILib.ICertServerPolicy::GetCertificateProperty
@@ -1024,7 +1026,8 @@
           instance object 
           marshal( struct) 
           GetRequestProperty([in] string  marshal( bstr) strPropertyName,
-                             [in] int32 PropertyType) runtime managed internalcall
+                             [in] int32 PropertyType,
+                             [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 01 00 02 60 00 00 )                         // .....`..
   } // end of method ICertServerExit::GetRequestProperty
@@ -1042,7 +1045,7 @@
           marshal( struct) 
           GetCertificateProperty([in] string  marshal( bstr) strPropertyName,
                                  [in] int32 PropertyType,
-								 [out] native int pvarPropertyValue) runtime managed internalcall
+								                 [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 03 00 02 60 00 00 )                         // .....`..
   } // end of method ICertServerExit::GetCertificateProperty
@@ -1141,7 +1144,8 @@
           instance object 
           marshal( struct) 
           GetRequestProperty([in] string  marshal( bstr) strPropertyName,
-                             [in] int32 PropertyType) runtime managed internalcall
+                             [in] int32 PropertyType,
+                             [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 01 00 02 60 00 00 )                         // .....`..
     .override CERTCLILib.ICertServerExit::GetRequestProperty
@@ -1161,7 +1165,7 @@
           marshal( struct) 
           GetCertificateProperty([in] string  marshal( bstr) strPropertyName,
                                  [in] int32 PropertyType,
-								 [out] native int pvarPropertyValue) runtime managed internalcall
+								                 [out] native int pvarPropertyValue) runtime managed internalcall
   {
     .custom instance void [mscorlib]System.Runtime.InteropServices.DispIdAttribute::.ctor(int32) = ( 01 00 03 00 02 60 00 00 )                         // .....`..
     .override CERTCLILib.ICertServerExit::GetCertificateProperty
