@@ -11,6 +11,8 @@ namespace MyFirstExitModule
     [ComVisible(true)]  // Expose to COM
     [ClassInterface(ClassInterfaceType.None)]
     [ProgId("MyFirstExitModule.ExitManage")] //this is the progId that will be used when registering the dll that you can look up in the registry
+
+    // TODO: i think thish should be distinct from Exit class
     [Guid("5f036df3-c2c4-42a0-918c-24a376828e57")]  //this is the GUID the dll's will be registered under, it should be unique for each exit module
     public class ExitManage : CERTEXITLib.ICertManageModule, CERTEXITLib.CCertManageExitModule
     {

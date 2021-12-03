@@ -1,0 +1,5 @@
+= AdcsSampleExitModule
+
+An Exit Module for the Microsoft Certification Authority, written in C#.
+
+It is capable to export issued Certificates with the corresponding request and some other Metadata to XML files in a specified Path. This data can then be parsed and, for example, imported into a central database.

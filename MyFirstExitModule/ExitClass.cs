@@ -16,7 +16,9 @@ namespace MyFirstExitModule
     [ComVisible(true)]  // Expose to COM
     [ClassInterface(ClassInterfaceType.None)]
     [ProgId("MyFirstExitModule.Exit")] // This is the progId that will be used when registering the dll that you can look up in the registry
-    [Guid("5f036df3-c2c4-42a0-918c-24a376828e57")]  // This is the GUID the dll's will be registered under, it should be unique for each exit module
+
+    // TODO: i think thish should be distinct from ExitManage class
+    [Guid("dc5b174f-076e-4d0e-9066-cdb9f2e6e58c")]  // This is the GUID the dll's will be registered under, it should be unique for each exit module
     public class Exit : CERTEXITLib.ICertExit2, CERTEXITLib.ICertExit
     {
         private string OutputDirectory = null;
@@ -206,6 +208,14 @@ namespace MyFirstExitModule
                     // Serialize to XML
                     var OutputXmlSerializer = new XmlSerializer(typeof(IssuedCertificate));
 
+                    var OutputFileName = CertificateInfo.RequestId.ToString() + ".xml";
+
+                    /*
+                    OutputFileName.Replace("%1", CertificateInfo.RequestId.ToString());
+                    OutputFileName.Replace("%2", CertificateInfo.Issuer);
+                    OutputFileName.Replace("%3", CertificateInfo.SerialNumber);
+                    */
+
                     using (var OutputStringWriter = new StringWriter())
                     {
                         using (XmlWriter OutputXmlWriter = XmlWriter.Create(OutputStringWriter))
@@ -215,7 +225,7 @@ namespace MyFirstExitModule
                             if (OutputDirectory != null)
                             {
                                 System.IO.File.WriteAllText(
-                                    OutputDirectory + @"\" + CertificateInfo.RequestId.ToString() + ".xml",
+                                    OutputDirectory + @"\" + OutputFileName,
                                     PrettyXml(OutputStringWriter.ToString())
                                     );
                             }
