@@ -23,9 +23,6 @@ namespace MyFirstExitModule
     {
         private string OutputDirectory = null;
 
-        [DllImport(@"oleaut32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
-        static extern Int32 VariantClear(IntPtr pvarg);
-
         #region Constructors
 
         public Exit()
@@ -125,11 +122,6 @@ namespace MyFirstExitModule
             {
                 case (int)ExitEvents.CertIssued:
 
-                    // https://blogs.msdn.microsoft.com/alejacma/2008/08/04/how-to-modify-an-interop-assembly-to-change-the-return-type-of-a-method-vb-net/
-                    IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
-                    IntPtr bstrPtr;
-                    int bstrLen;
-
                     var CertServer = new CCertServerExit();
                     var CertificateInfo = new IssuedCertificate();
                     
@@ -139,9 +131,7 @@ namespace MyFirstExitModule
                     // It can also be set to zero by invoking the SetContext method.
                     CertServer.SetContext(0);
 
-                    CertServer.GetCertificateProperty("SanitizedCAName", (int)PropertyType.PROPTYPE_STRING, variantObjectPtr);
-                    CertificateInfo.Issuer = (String)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
+                    CertificateInfo.Issuer = GetStringCertificateProperty(ref CertServer, "SanitizedCAName");
 
                     // Must be called before querying Certificate properties
                     // https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-setcontext
@@ -150,60 +140,31 @@ namespace MyFirstExitModule
                     // Retrieving Certificate Properties
                     // https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-getcertificateproperty
 
-                    // Get VARIANT containing certificate bytes
-                    // Read ANSI BSTR information from the VARIANT as we know RawCertificate property is ANSI BSTR.
-                    CertServer.GetCertificateProperty("RawCertificate", (int)PropertyType.PROPTYPE_BINARY, variantObjectPtr);
-                    bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);                    
-                    bstrLen = Marshal.ReadInt32(bstrPtr, -4);
-                    byte[] RawCertificate = new byte[bstrLen];
-                    Marshal.Copy(bstrPtr, RawCertificate, 0, bstrLen);
-                    CertificateInfo.RawCertificate = Convert.ToBase64String(RawCertificate, Base64FormattingOptions.None);
-                    VariantClear(variantObjectPtr);
+                    CertificateInfo.RawCertificate = Convert.ToBase64String(
+                        GetBinaryCertificateProperty(ref CertServer, "RawCertificate"),
+                        Base64FormattingOptions.None
+                        );
 
-                    CertServer.GetCertificateProperty("RequestId", (int)PropertyType.PROPTYPE_LONG, variantObjectPtr);
-                    CertificateInfo.RequestId = (int)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
+                    CertificateInfo.RequestId = GetLongCertificateProperty(ref CertServer, "RequestId");
+                    CertificateInfo.SerialNumber = GetStringCertificateProperty(ref CertServer, "SerialNumber");
+                    CertificateInfo.Subject = GetStringCertificateProperty(ref CertServer, "DistinguishedName");
+                    CertificateInfo.NotBefore = GetDateCertificateProperty(ref CertServer, "NotBefore");
+                    CertificateInfo.NotAfter = GetDateCertificateProperty(ref CertServer, "NotAfter");
 
-                    CertServer.GetCertificateProperty("SerialNumber", (int)PropertyType.PROPTYPE_STRING, variantObjectPtr);
-                    CertificateInfo.SerialNumber = (String)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
-
-                    CertServer.GetCertificateProperty("DistinguishedName", (int)PropertyType.PROPTYPE_STRING, variantObjectPtr);
-                    CertificateInfo.Subject = (String)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
-
-                    CertServer.GetCertificateProperty("NotBefore", (int)PropertyType.PROPTYPE_DATE, variantObjectPtr);
-                    CertificateInfo.NotBefore = (DateTime)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
-
-                    CertServer.GetCertificateProperty("NotAfter", (int)PropertyType.PROPTYPE_DATE, variantObjectPtr);
-                    CertificateInfo.NotAfter = (DateTime)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
 
                     // Retrieving Request Properties
                     // https://docs.microsoft.com/de-de/windows/win32/api/certif/nf-certif-icertserverexit-getrequestproperty
 
-                    CertServer.GetRequestProperty("RawRequest", (int)PropertyType.PROPTYPE_BINARY, variantObjectPtr);
-                    bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);
-                    bstrLen = Marshal.ReadInt32(bstrPtr, -4);
-                    byte[] RawRequest = new byte[bstrLen];
-                    Marshal.Copy(bstrPtr, RawRequest, 0, bstrLen);
-                    CertificateInfo.RawRequest = Convert.ToBase64String(RawRequest, Base64FormattingOptions.None);
-                    VariantClear(variantObjectPtr);
+                    CertificateInfo.RawRequest = Convert.ToBase64String(
+                        GetBinaryRequestProperty(ref CertServer, "RawRequest"), 
+                        Base64FormattingOptions.None
+                        );
 
-                    CertServer.GetRequestProperty("RequesterName", (int)PropertyType.PROPTYPE_STRING, variantObjectPtr);
-                    CertificateInfo.RequesterName = (String)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
-
-                    CertServer.GetRequestProperty("RequestType", (int)PropertyType.PROPTYPE_LONG, variantObjectPtr);
-                    CertificateInfo.RequestType = (int)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
-                    VariantClear(variantObjectPtr);
+                    CertificateInfo.RequesterName = GetStringRequestProperty(ref CertServer, "RequesterName");
+                    CertificateInfo.RequestType = GetLongRequestProperty(ref CertServer, "RequestType");
 
                     // TODO: Can we access the "Name Properties" here, and should we, in Terms of accessing the CA Database...?
                     // https://docs.microsoft.com/en-us/windows/win32/seccrypto/name-properties
-
-                    // We're done. Free the memory block allocated to hold VARIANT.
-                    Marshal.FreeHGlobal(variantObjectPtr);
 
                     // Serialize to XML
                     var OutputXmlSerializer = new XmlSerializer(typeof(IssuedCertificate));
@@ -246,6 +207,119 @@ namespace MyFirstExitModule
         }
 
         #endregion
+
+        #region Property retrieval functions
+
+        [DllImport(@"oleaut32.dll", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
+        static extern Int32 VariantClear(IntPtr pvarg);
+
+        private DateTime GetDateCertificateProperty(ref CCertServerExit server, string name)
+        {
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+
+            server.GetCertificateProperty(name, (int)PropertyType.PROPTYPE_DATE, variantObjectPtr);
+            var result = (DateTime)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+        private string GetStringCertificateProperty(ref CCertServerExit server, string name)
+        {
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+
+            server.GetCertificateProperty(name, (int)PropertyType.PROPTYPE_STRING, variantObjectPtr);
+            var result = (string)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+        private int GetLongCertificateProperty(ref CCertServerExit server, string name)
+        {
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+
+            server.GetCertificateProperty(name, (int)PropertyType.PROPTYPE_LONG, variantObjectPtr);
+            var result = (int)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+        private Byte[] GetBinaryCertificateProperty(ref CCertServerExit server, string name)
+        {
+            // https://blogs.msdn.microsoft.com/alejacma/2008/08/04/how-to-modify-an-interop-assembly-to-change-the-return-type-of-a-method-vb-net/
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+            IntPtr bstrPtr;
+            int bstrLen;
+
+            // Get VARIANT containing certificate bytes
+            // Read ANSI BSTR information from the VARIANT as we know RawCertificate property is ANSI BSTR.
+            server.GetCertificateProperty(name, (int)PropertyType.PROPTYPE_BINARY, variantObjectPtr);
+            bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);
+            bstrLen = Marshal.ReadInt32(bstrPtr, -4);
+            byte[] result = new byte[bstrLen];
+            Marshal.Copy(bstrPtr, result, 0, bstrLen);
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+
+        private DateTime GetDateRequestProperty(ref CCertServerExit server, string name)
+        {
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+
+            server.GetRequestProperty(name, (int)PropertyType.PROPTYPE_DATE, variantObjectPtr);
+            var result = (DateTime)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+        private string GetStringRequestProperty(ref CCertServerExit server, string name)
+        {
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+
+            server.GetRequestProperty(name, (int)PropertyType.PROPTYPE_STRING, variantObjectPtr);
+            var result = (string)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+        private int GetLongRequestProperty(ref CCertServerExit server, string name)
+        {
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+
+            server.GetRequestProperty(name, (int)PropertyType.PROPTYPE_LONG, variantObjectPtr);
+            var result = (int)(Marshal.GetObjectForNativeVariant(variantObjectPtr));
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+        private Byte[] GetBinaryRequestProperty(ref CCertServerExit server, string name)
+        {
+            // https://blogs.msdn.microsoft.com/alejacma/2008/08/04/how-to-modify-an-interop-assembly-to-change-the-return-type-of-a-method-vb-net/
+            IntPtr variantObjectPtr = Marshal.AllocHGlobal(2048);
+            IntPtr bstrPtr;
+            int bstrLen;
+
+            // Get VARIANT containing certificate bytes
+            // Read ANSI BSTR information from the VARIANT as we know RawCertificate property is ANSI BSTR.
+            server.GetRequestProperty(name, (int)PropertyType.PROPTYPE_BINARY, variantObjectPtr);
+            bstrPtr = Marshal.ReadIntPtr(variantObjectPtr, 8);
+            bstrLen = Marshal.ReadInt32(bstrPtr, -4);
+            byte[] result = new byte[bstrLen];
+            Marshal.Copy(bstrPtr, result, 0, bstrLen);
+            VariantClear(variantObjectPtr);
+            Marshal.FreeHGlobal(variantObjectPtr);
+
+            return result;
+        }
+
+        #endregion 
 
     }
 }
